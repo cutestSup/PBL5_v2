@@ -20,10 +20,10 @@ interface AuthContextType {
   login: (credentials: { email: string; password: string }) => Promise<AuthResponse>
   logout: () => Promise<void>
   register: (userData: {
-    fullName: string
+    name: string
     email: string
     password: string
-    phoneNumber: string
+    phone: string
   }) => Promise<RegisterResponse>
 }
 
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Tạo user từ dữ liệu đã lưu trong localStorage
         const userData = {
-          id: Number.parseInt(localStorage.getItem("userId") || "0"),
+          id: Number(localStorage.getItem("userId") || "0"),
           name: localStorage.getItem("userName") || "",
           email: localStorage.getItem("userEmail") || "",
           role_code: localStorage.getItem("userRole") || "",
@@ -78,10 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authService.login(credentials)
 
-      if (response.success) {
-        // Lưu token (loại bỏ "Bearer " nếu cần)
-        const token = response.data.token.startsWith("Bearer ") ? response.data.token.substring(7) : response.data.token
-
+      if (response.success && response.data) {
+        // Lưu token (giữ nguyên format "Bearer " nếu có)
+        const token = response.data.token
         localStorage.setItem("userToken", token)
 
         // Lưu thông tin người dùng
@@ -103,13 +102,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         // Chuyển hướng dựa trên vai trò
-        if (response.data.user.role_code === "R2") {
+        if (response.data.user.role_code === "R1") {
           router.push("/admin/dashboard")
         } else {
           router.push("/")
         }
+
+        return response
       } else {
-        throw new Error(response.mes || "Đăng nhập không thành công")
+        throw new Error(response.message || "Đăng nhập không thành công")
       }
     } catch (error) {
       console.error("Login error:", error)
@@ -144,23 +145,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Cập nhật phương thức register để phù hợp với response mới
   const register = async (userData: {
-    fullName: string
+    name: string
     email: string
     password: string
-    phoneNumber: string
+    phone: string
   }) => {
     setIsLoading(true)
     try {
       const response = await authService.register(userData)
 
       if (response.success) {
-        // Không tự động đăng nhập sau khi đăng ký
-        // Chỉ trả về kết quả thành công
         return response
       } else {
-        throw new Error(response.mes || "Đăng ký không thành công")
+        throw new Error(response.message || "Đăng ký không thành công")
       }
     } catch (error) {
       console.error("Register error:", error)

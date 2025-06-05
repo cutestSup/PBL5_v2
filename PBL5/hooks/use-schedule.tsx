@@ -16,6 +16,7 @@ export function useSchedule() {
       if (response.success) {
         setSchedules(response.data.scheduleData.rows)
         setRouteData(response.data.routeData)
+        console.log(response.data.scheduleData.rows)
       } else {
         setError("Không tìm thấy lịch trình phù hợp")
       }

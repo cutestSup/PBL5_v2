@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 export function useBookings() {
   return useQuery({
     queryKey: ["bookings"],
-    queryFn: () => bookingService.getBookings().then((res) => res.data),
+    queryFn: () => bookingService.getBookings(),
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 }
@@ -27,7 +27,13 @@ export function useCreateBooking() {
   const router = useRouter()
 
   return useMutation({
-    mutationFn: (bookingData: BookingData) => bookingService.createBooking(bookingData),
+    mutationFn: (bookingData: BookingData) => bookingService.createBooking({
+      name: bookingData.name,
+      email: bookingData.email,
+      phone: bookingData.phone,
+      scheduleId: String(bookingData.trip_id),
+      seats: bookingData.seat_ids.map(String),
+    }),
     onSuccess: (data) => {
       // Invalidate bookings query to refetch
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
@@ -38,7 +44,7 @@ export function useCreateBooking() {
       })
 
       // Redirect to booking details or payment page
-      router.push(`/payment?tripId=${data.data.schedule.id}&bookingId=${data.data.id}`)
+      router.push(`/payment?tripId=${data.schedule.id}&bookingId=${data.id}`)
     },
     onError: (error: any) => {
       toast({
@@ -58,7 +64,7 @@ export function useCancelBooking() {
     onSuccess: (data) => {
       // Invalidate bookings query to refetch
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
-      queryClient.invalidateQueries({ queryKey: ["booking", data.data.id] })
+      queryClient.invalidateQueries({ queryKey: ["booking", data.id] })
 
       toast({
         title: "Booking Cancelled",
@@ -75,21 +81,4 @@ export function useCancelBooking() {
   })
 }
 
-export function useDownloadTicket() {
-  return useMutation({
-    mutationFn: (id: string) => bookingService.downloadTicket(id),
-    onSuccess: () => {
-      toast({
-        title: "Download Started",
-        description: "Your ticket is being downloaded.",
-      })
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Download Failed",
-        description: error.response?.data?.message || "Could not download your ticket",
-        variant: "destructive",
-      })
-    },
-  })
-}
+// useDownloadTicket is commented out because bookingService does not have this method.

@@ -10,6 +10,8 @@ import { TripSuggestions } from "@/components/trip-suggestions"
 import { LocationCombobox } from "@/components/location-combobox"
 import { CTAButton } from "@/components/cta-button"
 import { ZoomImage } from "@/components/zoom-image"
+import { useLocation } from "@/hooks/use-location"
+import { useScheduleSearch } from "@/hooks/use-schedules"
 
 // Animation variants
 const fadeIn = {
@@ -47,6 +49,7 @@ export default function Home() {
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [returnDate, setReturnDate] = useState<Date | undefined>(undefined)
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way")
+  const { locations } = useLocation()
 
   // Popular destinations
   const popularDestinations = [
@@ -58,20 +61,38 @@ export default function Home() {
 
   // Handle search
   const handleSearch = () => {
-    // Format dates to ISO string for URL
+    if (!departure || !destination) {
+      alert("Vui lòng chọn điểm đi và điểm đến")
+      return
+    }
+
+    if (!date) {
+      alert("Vui lòng chọn ngày đi")
+      return
+    }
+
+    if (tripType === "round-trip" && !returnDate) {
+      alert("Vui lòng chọn ngày về")
+      return
+    }
+
+    // Format dates to ISO string
     const dateParam = date ? date.toISOString() : ""
     const returnDateParam = returnDate ? returnDate.toISOString() : ""
 
     // Redirect to search page with params
-    if (tripType === "one-way") {
-      router.push(`/search?from=${departure}&to=${destination}&date=${dateParam}&type=one-way`)
-      console.log(departure)
-      console.log(destination)
-    } else {
-      router.push(
-        `/search?from=${departure}&to=${destination}&date=${dateParam}&returnDate=${returnDateParam}&type=round-trip`,
-      )
+    const searchParams = new URLSearchParams({
+      from: departure,
+      to: destination,
+      date: dateParam,
+      type: tripType
+    })
+
+    if (tripType === "round-trip" && returnDateParam) {
+      searchParams.append("returnDate", returnDateParam)
     }
+
+    router.push(`/search?${searchParams.toString()}`)
   }
 
   return (
@@ -137,37 +158,77 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Điểm đi</label>
-                    <LocationCombobox placeholder="Chọn điểm đi" value={departure} onChange={setDeparture} />
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-gray-500 text-xs mb-1">Nơi xuất phát</label>
+                    <LocationCombobox 
+                      placeholder="Chọn điểm đi" 
+                      value={departure} 
+                      onChange={setDeparture}
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm" 
+                    />
                   </div>
 
-                  <div>
-                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Điểm đến</label>
-                    <LocationCombobox placeholder="Chọn điểm đến" value={destination} onChange={setDestination} />
+                  <div className="flex items-center justify-center mt-6">
+                    <button 
+                      onClick={() => {
+                        const temp = departure;
+                        setDeparture(destination);
+                        setDestination(temp);
+                      }}
+                      className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-transform hover:scale-110"
+                      aria-label="Đổi địa điểm"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 17h-7m0 0 3 3m-3-3 3-3M4 7h7m0 0-3 3m3-3L8 4" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2 whitespace-nowrap">
-                      Ngày đi
-                    </label>
-                    <DatePicker date={date} setDate={setDate} className="w-full" />
+                  <div className="flex-1">
+                    <label className="block text-gray-500 text-xs mb-1">Nơi đến</label>
+                    <LocationCombobox 
+                      placeholder="Chọn điểm đến" 
+                      value={destination} 
+                      onChange={setDestination}
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm" 
+                    />
                   </div>
 
-                  {tripType === "round-trip" && (
-                    <div>
-                      <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2 whitespace-nowrap">
-                        Ngày về
-                      </label>
-                      <DatePicker date={returnDate} setDate={setReturnDate} className="w-full" />
+                  <div className="min-w-[200px]">
+                    <label className="block text-gray-500 text-xs mb-1">Ngày đi</label>
+                    <DatePicker 
+                      date={date} 
+                      setDate={setDate} 
+                      className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm" />
+                  </div>
+
+                  {tripType === "round-trip" ? (
+                    <div className="min-w-[200px]">
+                      <label className="block text-gray-500 text-xs mb-1">Ngày về</label>
+                      <DatePicker 
+                        date={returnDate} 
+                        setDate={setReturnDate} 
+                        className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm" 
+                      />
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="flex justify-center mt-6">
-                  <CTAButton className="rounded-full px-8 shadow-lg" size="lg" onClick={handleSearch}>
-                    Tìm chuyến xe
+                  <CTAButton 
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg px-8 py-2.5 shadow-lg" 
+                    onClick={() => {
+                      if (tripType === "round-trip" && returnDate && date) {
+                        if (new Date(returnDate) <= new Date(date)) {
+                          alert("Ngày về phải sau ngày đi");
+                          return;
+                        }
+                      }
+                      handleSearch();
+                    }}
+                  >
+                    Tìm kiếm
                   </CTAButton>
                 </div>
               </CardContent>

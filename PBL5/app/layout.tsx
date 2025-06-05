@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-
+import { AuthProvider } from "@/context/auth-context"
 import { Providers } from "./providers"
 import { Navbar } from "@/components/navbar"
 import { BackToTop } from "@/components/back-to-top"
@@ -24,8 +24,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
+      <head>
+        
+      </head>
       <body className={inter.className}>
         <Providers>
+          <AuthProvider>
           <div className="flex flex-col min-h-screen">
             <Navbar />
             <main className="pt-16 flex-grow">{children}</main>
@@ -34,6 +38,7 @@ export default function RootLayout({
             <ChatbotWidget />
             <Toaster />
           </div>
+          </AuthProvider>
         </Providers>
       </body>
     </html>

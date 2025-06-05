@@ -42,9 +42,7 @@ export function Navbar() {
     // Check login state
     const checkLogin = () => {
       const hasToken = localStorage.getItem("userToken")
-      const avatar =
-        localStorage.getItem("userAvatar") ||
-        "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-tlbz6O42Q2NeW29HWi9kfwRJTV9WTG.png"
+      const avatar = localStorage.getItem("userAvatar") || "/placeholder.svg?height=32&width=32&text=BC"
       const name = localStorage.getItem("userName") || "User"
       const email = localStorage.getItem("userEmail") || "user@example.com"
       const role = localStorage.getItem("userRole") || "user"
@@ -75,10 +73,7 @@ export function Navbar() {
           localStorage.setItem("userRole", "user")
           localStorage.setItem("userName", "Tạ Quang Hữu")
           localStorage.setItem("userEmail", "huutaquang23@gmail.com")
-          localStorage.setItem(
-            "userAvatar",
-            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-tlbz6O42Q2NeW29HWi9kfwRJTV9WTG.png",
-          )
+          localStorage.setItem("userAvatar", "/placeholder.svg?height=32&width=32&text=BC")
         } else {
           localStorage.removeItem("userToken")
           localStorage.removeItem("userRole")
@@ -97,13 +92,6 @@ export function Navbar() {
       window.removeEventListener("storage", handleStorageChange)
     }
   }, [isLoggedIn])
-
-  // Redirect to admin dashboard if user is admin
-  React.useEffect(() => {
-    if (isLoggedIn && userRole === "admin" && pathname.startsWith("/admin")) {
-      router.push("/admin/dashboard")
-    }
-  }, [isLoggedIn, userRole, pathname, router])
 
   // Change navbar style on scroll
   React.useEffect(() => {
@@ -156,28 +144,23 @@ export function Navbar() {
     router.push("/")
   }
 
-  // If we're on an admin page, don't render the regular navbar
-  if (pathname.startsWith("/admin")) {
-    return null
-  }
-
   return (
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isScrolled
-          ? "bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800"
-          : "bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+          ? "bg-gradient-to-r from-blue-600/90 to-indigo-600/90 backdrop-blur-md border-b shadow-sm"
+          : "bg-gradient-to-r from-blue-600/70 to-indigo-600/70 backdrop-blur-sm",
       )}
     >
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 transition-transform duration-300 hover:scale-105">
-            <div className="bg-blue-600 text-white p-1.5 rounded-md">
+            <div className="bg-white text-blue-600 p-1.5 rounded-md">
               <Bus className="h-5 w-5" />
             </div>
-            <span className="font-bold text-xl text-blue-600 dark:text-white">Be Cool</span>
+            <span className="font-bold text-xl text-white">Be Cool</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -187,10 +170,8 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  item.isActive
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
+                  "px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-white/20 hover:text-white hover:scale-105 transform",
+                  item.isActive ? "bg-white/20 text-white" : "text-white/90 hover:text-white",
                 )}
               >
                 <span className="flex items-center">
@@ -372,18 +353,6 @@ export function Navbar() {
                           </Button>
                         </SheetClose>
 
-                        {userRole === "admin" && (
-                          <SheetClose asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start hover:translate-x-1 transform"
-                              onClick={() => router.push("/admin/dashboard")}
-                            >
-                              Quản trị hệ thống
-                            </Button>
-                          </SheetClose>
-                        )}
-
                         <Button variant="destructive" className="w-full mt-4 hover:bg-red-600" onClick={handleLogout}>
                           Đăng xuất
                         </Button>
@@ -399,3 +368,4 @@ export function Navbar() {
     </header>
   )
 }
+

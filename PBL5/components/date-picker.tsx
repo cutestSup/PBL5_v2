@@ -23,7 +23,25 @@ export function DatePicker({ date, setDate, className }: DatePickerProps) {
           className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground", className)}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP", { locale: vi }) : <span>Chọn ngày đi</span>}
+          {date ? (
+            <span>
+              {(() => {
+                const day = format(date, "i", { locale: vi });
+                const dayMap: { [key: string]: string } = {
+                  "1": "T2",
+                  "2": "T3",
+                  "3": "T4",
+                  "4": "T5",
+                  "5": "T6",
+                  "6": "T7",
+                  "7": "CN"
+                };
+                return `${dayMap[day]}, ${format(date, "dd/MM/yyyy", { locale: vi })}`;
+              })()}
+            </span>
+          ) : (
+            <span>Chọn ngày đi</span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">

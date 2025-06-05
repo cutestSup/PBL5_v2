@@ -1,4 +1,4 @@
-import apiClient from "@/lib/api-client"
+import { api } from '@/lib/api'
 import { AxiosError } from "axios"
 
 export interface LoginCredentials {
@@ -7,28 +7,30 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
-  fullName: string
+  name: string
   email: string
   password: string
-  phoneNumber: string
+  phone?: string
+}
+
+export interface LoginData {
+  email: string
+  password: string
 }
 
 // Cập nhật interface AuthResponse để phù hợp với response thực tế
 export interface AuthResponse {
   success: boolean
-  mes: string // Thay đổi từ message sang mes
-  data: {
+  message: string
+  data?: {
     token: string
     user: {
       id: number
       name: string
       email: string
-      password: string
-      avatar: string | null
-      phone: string
-      address: string | null
-      role_code: string // Thay đổi từ role sang role_code
-      status: string
+      phone?: string
+      role_code: string
+      avatar?: string | null
     }
   }
 }
@@ -36,64 +38,65 @@ export interface AuthResponse {
 // Thêm interface RegisterResponse để phù hợp với response thực tế
 export interface RegisterResponse {
   success: boolean
-  mes: string
-  data: {
-    user: {
-      id: number
-      name: string
-      email: string
-      password: string
-      phone: string
+  message: string
+  data?: {
+    id: number
+    name: string
+    email: string
+    phone?: string
+    role_code: string
+    avatar?: string | null
     }
+  }
+
+class AuthService {
+  async register(data: RegisterData): Promise<RegisterResponse> {
+    const response = await api.post<RegisterResponse>('/auth/register', data)
+      return response.data
+  }
+
+  async login(data: LoginData): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/login', data)
+    if (response.data.success && response.data.data?.token) {
+      localStorage.setItem('token', response.data.data.token)
+    }
+    return response.data
+  }
+
+  async logout(): Promise<void> {
+    localStorage.removeItem('token')
+  }
+
+  async getCurrentUser(): Promise<AuthResponse> {
+    const response = await api.get<AuthResponse>('/auth/me')
+    return response.data
+  }
+
+  async updateProfile(data: Partial<RegisterData>): Promise<AuthResponse> {
+    const response = await api.put<AuthResponse>('/auth/profile', data)
+    return response.data
+  }
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<AuthResponse> {
+    const response = await api.put<AuthResponse>('/auth/change-password', {
+      oldPassword,
+      newPassword,
+    })
+    return response.data
+  }
+
+  async forgotPassword(email: string): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/forgot-password', { email })
+    return response.data
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/reset-password', {
+      token,
+      newPassword,
+    })
+    return response.data
   }
 }
 
-export const authService = {
-  login: async (credentials: LoginCredentials) => {
-    try {
-      console.log("Attempting login with:", credentials)
-      const response = await apiClient.post<AuthResponse>("/auth/login", credentials)
-      console.log("Login successful:", response.data)
-      return response.data
-    } catch (error) {
-      console.error("Login error:", error)
-
-      if (error instanceof AxiosError) {
-        console.error("Response error data:", error.response?.data)
-
-        // Tạo thông báo lỗi dựa trên phản hồi từ server
-        const errorMessage =
-          error.response?.data?.mes ||
-          error.response?.data?.error ||
-          `Lỗi ${error.response?.status}: Đăng nhập không thành công`
-
-        throw new Error(errorMessage)
-      } else if (error instanceof Error) {
-        throw new Error(`Lỗi khi thiết lập yêu cầu: ${error.message}`)
-      } else {
-        throw new Error("Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối mạng.")
-      }
-    }
-  },
-
-  // Cập nhật phương thức register để sử dụng RegisterResponse
-  register: async (userData: RegisterData) => {
-    const response = await apiClient.post<RegisterResponse>("/auth/register", userData)
-    return response.data
-  },
-
-  logout: async () => {
-    const response = await apiClient.post("/auth/logout")
-    return response.data
-  },
-
-  getCurrentUser: async () => {
-    const response = await apiClient.get<AuthResponse>("/auth/me")
-    return response.data
-  },
-
-  updateProfile: async (userData: Partial<RegisterData>) => {
-    const response = await apiClient.put<AuthResponse>("/auth/me", userData)
-    return response.data
-  },
-}
+export const authService = new AuthService()

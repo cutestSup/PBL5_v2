@@ -2,27 +2,28 @@
 
 import * as React from "react"
 import { Check, ChevronsUpDown, MapPin } from "lucide-react"
-
+import { useLocation } from "@/hooks/use-location"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { type Location } from "@/services/location-service"
 
 // Popular locations in Vietnam
-const popularLocations = [
-  { value: "ho-chi-minh", label: "Hồ Chí Minh" },
-  { value: "ha-noi", label: "Hà Nội" },
-  { value: "da-nang", label: "Đà Nẵng" },
-  { value: "da-lat", label: "Đà Lạt" },
-  { value: "nha-trang", label: "Nha Trang" },
-  { value: "vung-tau", label: "Vũng Tàu" },
-  { value: "hue", label: "Huế" },
-  { value: "quy-nhon", label: "Quy Nhơn" },
-  { value: "phan-thiet", label: "Phan Thiết" },
-  { value: "can-tho", label: "Cần Thơ" },
-  { value: "hai-phong", label: "Hải Phòng" },
-  { value: "vinh", label: "Vinh" },
-]
+// const popularLocations = [
+//   { value: "ho-chi-minh", label: "Hồ Chí Minh" },
+//   { value: "ha-noi", label: "Hà Nội" },
+//   { value: "da-nang", label: "Đà Nẵng" },
+//   { value: "da-lat", label: "Đà Lạt" },
+//   { value: "nha-trang", label: "Nha Trang" },
+//   { value: "vung-tau", label: "Vũng Tàu" },
+//   { value: "hue", label: "Huế" },
+//   { value: "quy-nhon", label: "Quy Nhơn" },
+//   { value: "phan-thiet", label: "Phan Thiết" },
+//   { value: "can-tho", label: "Cần Thơ" },
+//   { value: "hai-phong", label: "Hải Phòng" },
+//   { value: "vinh", label: "Vinh" },
+// ]
 
 interface LocationComboboxProps {
   placeholder: string
@@ -33,46 +34,31 @@ interface LocationComboboxProps {
 
 export function LocationCombobox({ placeholder, value, onChange, className }: LocationComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [recentLocations, setRecentLocations] = React.useState<typeof popularLocations>([])
+  const [searchText, setSearchText] = React.useState("")
+  const { locations, isLoading, searchLocations } = useLocation()
 
-  // Load recent locations from localStorage on component mount
+  // Load locations when search text changes
   React.useEffect(() => {
-    const storedLocations = localStorage.getItem("recentLocations")
-    if (storedLocations) {
-      try {
-        const parsed = JSON.parse(storedLocations)
-        setRecentLocations(parsed.slice(0, 3)) // Only show top 3 recent locations
-      } catch (e) {
-        console.error("Failed to parse recent locations", e)
-      }
-    }
-  }, [])
+    const timeoutId = setTimeout(() => {
+      searchLocations(searchText)
+    }, 300)
 
-  // Save selected location to recent locations
+    return () => clearTimeout(timeoutId)
+  }, [searchText, searchLocations])
+
   const handleSelect = (currentValue: string) => {
-    const selectedLocation = popularLocations.find((location) => location.value === currentValue)
-
-    if (selectedLocation) {
-      // Add to recent locations
-      setRecentLocations((prev) => {
-        // Remove if already exists
-        const filtered = prev.filter((loc) => loc.value !== currentValue)
-        // Add to beginning of array
-        const updated = [selectedLocation, ...filtered].slice(0, 3)
-        // Save to localStorage
-        localStorage.setItem("recentLocations", JSON.stringify(updated))
-        return updated
-      })
-    }
-
-    onChange(currentValue)
+    const selectedLocation = locations.find((location: Location) => location.name === currentValue)
+    onChange(selectedLocation?.id?.toString() || "")
+    console.log("Selected location:", currentValue)
+    console.log("ID:", selectedLocation?.id)
     setOpen(false)
   }
 
   const displayValue = React.useMemo(() => {
-    const location = popularLocations.find((location) => location.value === value)
-    return location?.label || value
-  }, [value])
+    if (!value) return placeholder
+    const selectedLocation = locations.find((location: Location) => location.id.toString() === value)
+    return selectedLocation ? selectedLocation.name : placeholder
+  }, [value, locations, placeholder])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -83,36 +69,35 @@ export function LocationCombobox({ placeholder, value, onChange, className }: Lo
           aria-expanded={open}
           className={cn(
             "w-full justify-between bg-background border border-input hover:bg-accent hover:text-accent-foreground pl-9 relative h-10",
+            !value && "text-muted-foreground",
             className,
           )}
         >
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          {value ? displayValue : placeholder}
+          {displayValue}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
-          <CommandInput placeholder={`Tìm ${placeholder.toLowerCase()}`} />
+          <CommandInput 
+            placeholder={`Tìm ${placeholder.toLowerCase()}`} 
+            value={searchText}
+            onValueChange={setSearchText}
+          />
           <CommandList>
-            <CommandEmpty>Không tìm thấy địa điểm</CommandEmpty>
-
-            {recentLocations.length > 0 && (
-              <CommandGroup heading="Tìm kiếm gần đây">
-                {recentLocations.map((location) => (
-                  <CommandItem key={`recent-${location.value}`} value={location.value} onSelect={handleSelect}>
-                    <Check className={cn("mr-2 h-4 w-4", value === location.value ? "opacity-100" : "opacity-0")} />
-                    {location.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-
-            <CommandGroup heading="Địa điểm phổ biến">
-              {popularLocations.map((location) => (
-                <CommandItem key={location.value} value={location.value} onSelect={handleSelect}>
-                  <Check className={cn("mr-2 h-4 w-4", value === location.value ? "opacity-100" : "opacity-0")} />
-                  {location.label}
+            <CommandEmpty>
+              {isLoading ? "Đang tìm kiếm..." : "Không tìm thấy địa điểm"}
+            </CommandEmpty>
+            <CommandGroup>
+              {locations.map((location: Location) => (
+                <CommandItem 
+                  key={location.id} 
+                  value={location.name} 
+                  onSelect={handleSelect}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === location.id.toString() ? "opacity-100" : "opacity-0")} />
+                  {`${location.name}`}
                 </CommandItem>
               ))}
             </CommandGroup>

@@ -20,7 +20,6 @@ export function SimplifiedSeatSelector({
   availableSeats,
   onSelectSeats,
   selectedSeats,
-  maxSeats = 5,
   price,
 }: SimplifiedSeatSelectorProps) {
   // Generate seat layout based on bus type
@@ -101,11 +100,7 @@ export function SimplifiedSeatSelector({
     const seatIndex = newSelectedSeats.indexOf(seat)
 
     if (seatIndex === -1) {
-      // Check if max seats limit is reached
-      if (newSelectedSeats.length >= maxSeats) {
-        alert(`Bạn chỉ có thể chọn tối đa ${maxSeats} ghế.`)
-        return
-      }
+
       newSelectedSeats.push(seat)
     } else {
       newSelectedSeats.splice(seatIndex, 1)
@@ -255,13 +250,6 @@ export function SimplifiedSeatSelector({
                   <p>Vui lòng chọn ghế</p>
                 </div>
               )}
-            </div>
-
-            <div className="flex items-center justify-center text-sm text-center text-gray-500 dark:text-gray-400 mb-2">
-              <Info className="h-4 w-4 mr-1" />
-              <p>
-                Chọn tối đa {maxSeats} ghế. Bạn đã chọn {selectedSeats.length}/{maxSeats} ghế.
-              </p>
             </div>
           </div>
         </div>
