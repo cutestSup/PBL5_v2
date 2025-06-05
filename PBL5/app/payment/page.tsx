@@ -128,7 +128,7 @@ export default function PaymentPage() {
       
       if (response.success) {
         // Refresh the booking details to get updated status
-        router.refresh()
+        router.push("/")
       }
     } catch (error) {
       console.error('Payment processing error:', error)
@@ -265,9 +265,9 @@ export default function PaymentPage() {
                   <div className="font-semibold mb-2">
                     Thông tin chuyển khoản - {getPaymentMethod(payment_method)}
                   </div>
-                  <div><span className="text-gray-600">Ngân hàng:</span> <span className="font-medium">MB Bank</span></div>
-                  <div><span className="text-gray-600">Số tài khoản:</span> <span className="font-medium">0123456789</span></div>
-                  <div><span className="text-gray-600">Tên TK:</span> <span className="font-medium">CONG TY FUTA</span></div>
+                  <div><span className="text-gray-600">Ngân hàng:</span> <span className="font-medium">TP Bank</span></div>
+                  <div><span className="text-gray-600">Số tài khoản:</span> <span className="font-medium">22213092004</span></div>
+                  <div><span className="text-gray-600">Tên TK:</span> <span className="font-medium">CONG TY BECOOL</span></div>
                   <div><span className="text-gray-600">Nội dung CK:</span> <span className="font-medium">THANHTOAN {reference}</span></div>
                 </div>
               </div>

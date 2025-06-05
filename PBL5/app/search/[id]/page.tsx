@@ -57,21 +57,18 @@ export default function ScheduleDetailPage() {
       setBookingMessage(error.message || "Đặt vé thất bại!")
     }
   })
-
   // Booking mutation
   const bookingMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem("userToken")
-      if (!token) {
-        throw new Error("Vui lòng đăng nhập để đặt vé")
-      }
       const res = await fetch("http://localhost:5000/api/booking/", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
           scheduleId: id,
           seats: selectedSeats
         }),
@@ -92,9 +89,6 @@ export default function ScheduleDetailPage() {
     onError: (err: any) => {
       setBookingMessage(err.message || "Đặt vé thất bại!")
       console.log("Lỗi đặt vé:", err)
-      if (err.message === "Vui lòng đăng nhập để đặt vé") {
-        router.push("/auth/login?redirect=/search/" + id)
-      }
     },
   })
 

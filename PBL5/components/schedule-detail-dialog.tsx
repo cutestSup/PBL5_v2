@@ -211,32 +211,46 @@ export function ScheduleDetailDialog({
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(bookingData),
-      });
+      });        let errorData;
+        const data = await response.json();
+        
         if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Booking error:', errorData);
-        throw new Error(errorData.message || "Đặt vé thất bại");
-      }
-      
-      const data = await response.json();
-      console.log('Booking response:', data);
-      return data;
+          console.error('Booking error:', data);
+          throw new Error(data.message || "Đặt vé thất bại. Vui lòng thử lại sau.");
+        }
+        
+        if (!data.success) {
+          console.error('Booking failed:', data);
+          throw new Error(data.message || "Đặt vé thất bại. Vui lòng kiểm tra lại thông tin.");
+        }
+        
+        console.log('Booking response:', data);
+        return data;
+    },
+    onError: (error: Error) => {
+      setError(error.message || "Đặt vé thất bại!");
+      toast({
+        variant: "destructive",
+        title: "Đặt vé thất bại",
+        description: error.message || "Vui lòng thử lại sau.",
+      });
     },
     onSuccess: (data) => {
+      if (!data.data?.id) {
+        toast({
+          variant: "destructive",
+          title: "Đặt vé thất bại",
+          description: "Không thể tạo đơn đặt vé. Vui lòng thử lại sau.",
+        });
+        return;
+      }
+
       toast({
         title: "Đặt vé thành công!",
         description: "Bạn sẽ được chuyển đến trang thanh toán.",
       });
       // Chuyển đến trang thanh toán với ID đặt vé
       router.push(`/payment?bookingId=${data.data.id}`);
-    },
-    onError: (error: Error) => {
-      setError(error.message || "Đặt vé thất bại!");
-      toast({
-        title: "Đặt vé thất bại!",
-        description: error.message || "Vui lòng thử lại sau.", 
-        variant: "destructive",
-      });
     }
   })
 
