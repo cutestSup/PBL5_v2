@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="vi" suppressHydrationWarning>
       <head>
-        
+        <link rel="icon" type="image/png" href="/logo_pbl5.png" />
       </head>
       <body className={inter.className}>
         <Providers>

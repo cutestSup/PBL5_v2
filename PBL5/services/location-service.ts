@@ -5,6 +5,8 @@ export interface Location {
   name: string
   province: string
   address: string | null
+  image_url?: string // URL hình ảnh địa điểm
+  description?: string // Mô tả về địa điểm
 }
 
 export interface LocationResponse {

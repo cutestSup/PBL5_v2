@@ -19,6 +19,10 @@ export interface RouteData {
   id: number
   fromLocation: Location
   toLocation: Location
+  image_url?: string // URL hình ảnh tuyến xe
+  description?: string // Mô tả tuyến xe
+  distance?: string // Khoảng cách
+  duration?: string // Thời gian di chuyển
 }
 
 export interface ScheduleResponse {

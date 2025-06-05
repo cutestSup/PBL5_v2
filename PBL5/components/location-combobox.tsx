@@ -95,9 +95,28 @@ export function LocationCombobox({ placeholder, value, onChange, className }: Lo
                   key={location.id} 
                   value={location.name} 
                   onSelect={handleSelect}
+                  className="flex items-center gap-3 py-3"
                 >
                   <Check className={cn("mr-2 h-4 w-4", value === location.id.toString() ? "opacity-100" : "opacity-0")} />
-                  {`${location.name}`}
+                  {location.image_url ? (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img 
+                        src={location.image_url} 
+                        alt={location.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="h-6 w-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{location.name}</span>
+                    {location.province && (
+                      <span className="text-sm text-gray-500">{location.province}</span>
+                    )}
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>

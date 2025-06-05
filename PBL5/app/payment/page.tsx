@@ -6,35 +6,55 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useBookingDetail } from "@/hooks/use-booking-detail"
+import { paymentService } from "@/services/payment-service"
 
-interface LocalBooking {
-  id: number
-  booking_code: string
-  trip_id: number
-  user_id: number
-  status: string
-  total_price: number
-  payment_status: string
-  payment_method: string
-  created_at: string
-  seats: Array<{
-    id: number
-    seat_number: string
-    status: string
-    price: number
-  }>
-  trip: {
-    from: string
-    to: string
-    departure_time: string
-    arrival_time: string
-    company_name: string
-  }
-  payment_url?: string
-  user: {
-    name: string
-    email: string
-    phone: string
+interface BookingDetailResponse {
+  success: boolean
+  data: {
+    booking: {
+      id: number
+      name: string
+      email: string
+      phone: string
+      scheduleId: number
+      reference: string
+      booking_status: string
+      totalAmount: number
+      payment_method: string
+      payment_url: string
+      expires_at: string
+      scheduleData: {
+        id: number
+        routeId: number
+        departureTime: string
+        arrivalTime: string
+        date: string
+        price: number
+        availableSeats: number
+        totalSeats: number
+        busType: string | null
+        status_code: string | null
+        routeData: {
+          id: number
+          fromLocationId: number
+          toLocationId: number
+          fromLocation: {
+            name: string
+          }
+          toLocation: {
+            name: string
+          }
+        }
+      }
+    }
+    seats: {
+      count: number
+      rows: Array<{
+        id: number
+        bookingId: number
+        seatId: number
+      }>
+    }
   }
 }
 
@@ -42,13 +62,26 @@ export default function PaymentPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const bookingId = searchParams.get("bookingId")
-  const [timeLeft, setTimeLeft] = useState(1124) // 18:44 in seconds
+  
+  // Initialize timeLeft from expires_at
+  const [timeLeft, setTimeLeft] = useState(1124)
 
   // Fetch booking details
   const { data: bookingDetail, isLoading } = useBookingDetail(bookingId || undefined)
 
+  // Update timeLeft based on expires_at when booking data is available
+  useEffect(() => {
+    if (bookingDetail?.data?.booking?.expires_at) {
+      const expiresAt = new Date(bookingDetail.data.booking.expires_at).getTime()
+      const now = new Date().getTime()
+      const diff = Math.max(0, Math.floor((expiresAt - now) / 1000))
+      setTimeLeft(diff)
+    }
+  }, [bookingDetail?.data?.booking?.expires_at])
+
   // Format currency
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined) return "0đ"
     return amount.toLocaleString() + "đ"
   }
 
@@ -57,6 +90,16 @@ export default function PaymentPage() {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Format date safely
+  const formatDateTime = (date: string, time: string) => {
+    try {
+      return new Date(`${date} ${time}`).toLocaleString("vi-VN")
+    } catch (error) {
+      console.error("Error formatting date:", error)
+      return "Invalid date"
+    }
   }
 
   // Countdown timer
@@ -74,6 +117,26 @@ export default function PaymentPage() {
     return () => clearInterval(timer)
   }, [])
 
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const handlePaymentConfirmation = async () => {
+    if (!bookingId) return
+    
+    try {
+      setIsProcessing(true)
+      const response = await paymentService.processPayment(bookingId)
+      
+      if (response.success) {
+        // Refresh the booking details to get updated status
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Payment processing error:', error)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-100 to-white flex items-center justify-center">
@@ -82,7 +145,7 @@ export default function PaymentPage() {
     )
   }
 
-  if (!bookingDetail?.data) {
+  if (!bookingDetail?.data?.booking) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-100 to-white flex items-center justify-center">
         <div className="text-red-600">Không tìm thấy thông tin đặt vé</div>
@@ -90,12 +153,49 @@ export default function PaymentPage() {
     )
   }
 
-  const booking = bookingDetail.data as LocalBooking
+  const { booking, seats } = bookingDetail.data
+  const {
+    totalAmount,
+    name,
+    email,
+    phone,
+    reference,
+    payment_url,
+    booking_status,
+    payment_method,
+    scheduleData
+  } = booking
 
-  if (timeLeft <= 0) {
-    // Redirect to booking page when time runs out
-    router.push("/search")
-    return null
+  const {
+    price,
+    date,
+    departureTime,
+    arrivalTime,
+    routeData
+  } = scheduleData
+
+  const {
+    fromLocation,
+    toLocation
+  } = routeData
+
+  const seatCount = seats?.count ?? 0
+
+  // Add status translations
+  const getBookingStatus = (status: string) => {
+    switch (status) {
+      case 'BKS4': return 'Chờ thanh toán'
+      // Add other status mappings as needed
+      default: return status
+    }
+  }
+
+  const getPaymentMethod = (method: string) => {
+    switch (method) {
+      case 'PMM2': return 'Chuyển khoản ngân hàng'
+      // Add other method mappings as needed
+      default: return method
+    }
   }
 
   return (
@@ -114,10 +214,15 @@ export default function PaymentPage() {
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardContent className="p-6">
-              {/* Header */}
+              {/* Header with Status */}
               <div className="flex justify-between items-center mb-6">
-                <div className="text-3xl font-bold text-orange-600">
-                  {formatCurrency(booking.total_price)}
+                <div>
+                  <div className="text-3xl font-bold text-orange-600">
+                    {formatCurrency(totalAmount)}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    Trạng thái: <span className="font-medium">{getBookingStatus(booking_status)}</span>
+                  </div>
                 </div>
                 <div className="text-sm text-gray-500">
                   Thời gian còn lại: <span className="font-semibold">{formatTime(timeLeft)}</span>
@@ -127,13 +232,13 @@ export default function PaymentPage() {
               {/* QR Code Section */}
               <div className="border-t border-b py-6 mb-6">
                 <div className="flex flex-col items-center">
-                  {booking.payment_url ? (
+                  {payment_url ? (
                     <>
                       <div className="text-center mb-4 text-gray-600">
                         Quét mã QR để thanh toán
                       </div>
                       <Image
-                        src={booking.payment_url}
+                        src={payment_url}
                         alt="QR Code thanh toán"
                         width={200}
                         height={200}
@@ -157,11 +262,13 @@ export default function PaymentPage() {
               {/* Banking Info */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="text-center text-sm">
-                  <div className="font-semibold mb-2">Thông tin chuyển khoản</div>
+                  <div className="font-semibold mb-2">
+                    Thông tin chuyển khoản - {getPaymentMethod(payment_method)}
+                  </div>
                   <div><span className="text-gray-600">Ngân hàng:</span> <span className="font-medium">MB Bank</span></div>
                   <div><span className="text-gray-600">Số tài khoản:</span> <span className="font-medium">0123456789</span></div>
                   <div><span className="text-gray-600">Tên TK:</span> <span className="font-medium">CONG TY FUTA</span></div>
-                  <div><span className="text-gray-600">Nội dung CK:</span> <span className="font-medium">THANHTOAN {booking.booking_code}</span></div>
+                  <div><span className="text-gray-600">Nội dung CK:</span> <span className="font-medium">THANHTOAN {reference}</span></div>
                 </div>
               </div>
 
@@ -169,29 +276,29 @@ export default function PaymentPage() {
               <div className="space-y-4 mb-6">
                 <div>
                   <div className="font-medium text-gray-900 mb-1">Thông tin hành khách</div>
-                  <div className="text-sm text-gray-600">{booking.user.name}</div>
-                  <div className="text-sm text-gray-600">{booking.user.email}</div>
-                  <div className="text-sm text-gray-600">{booking.user.phone}</div>
+                  <div className="text-sm text-gray-600">{name}</div>
+                  <div className="text-sm text-gray-600">{email}</div>
+                  <div className="text-sm text-gray-600">{phone}</div>
                 </div>
 
                 <div>
                   <div className="font-medium text-gray-900 mb-1">Thông tin lượt đi</div>
                   <div className="text-sm text-gray-900">
-                    {booking.trip.from} → {booking.trip.to}
+                    {fromLocation.name} → {toLocation.name}
                   </div>
                   <div className="text-sm text-gray-600">
-                    Khởi hành: {new Date(booking.trip.departure_time).toLocaleString("vi-VN")}
+                    Khởi hành: {formatDateTime(date, departureTime)}
                   </div>
                   <div className="text-sm text-gray-600">
-                    Số ghế: {booking.seats.map(seat => seat.seat_number).join(", ")}
+                    Số ghế: {seatCount} ghế
                   </div>
                 </div>
 
                 <div>
                   <div className="font-medium text-gray-900 mb-1">Chi tiết giá</div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Giá vé ({booking.seats.length} ghế)</span>
-                    <span>{formatCurrency(booking.seats.reduce((sum, seat) => sum + seat.price, 0))}</span>
+                    <span className="text-gray-600">Giá vé ({seatCount} ghế)</span>
+                    <span>{formatCurrency(price * seatCount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Phí thanh toán</span>
@@ -199,9 +306,26 @@ export default function PaymentPage() {
                   </div>
                   <div className="flex justify-between font-medium text-gray-900 border-t pt-2 mt-2">
                     <span>Tổng tiền</span>
-                    <span>{formatCurrency(booking.total_price)}</span>
+                    <span>{formatCurrency(totalAmount)}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Reference Code */}
+              <div className="text-center text-sm text-gray-600 mb-4">
+                Mã đơn hàng: <span className="font-medium">{reference}</span>
+              </div>
+
+              {/* Confirmation Button */}
+              <div className="mt-6">
+                <Button
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                  size="lg"
+                  onClick={handlePaymentConfirmation}
+                  disabled={isProcessing || timeLeft <= 0}
+                >
+                  {isProcessing ? 'Đang xử lý...' : 'Xác nhận đã thanh toán'}
+                </Button>
               </div>
 
               {/* Footer */}
