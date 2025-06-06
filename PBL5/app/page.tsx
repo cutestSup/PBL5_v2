@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Bus, Star } from "lucide-react"
 import { motion } from "framer-motion"
@@ -12,6 +12,7 @@ import { CTAButton } from "@/components/cta-button"
 import { ZoomImage } from "@/components/zoom-image"
 import { useLocation } from "@/hooks/use-location"
 import { useScheduleSearch } from "@/hooks/use-schedules"
+import { cn } from "@/lib/utils"
 
 // Animation variants
 const fadeIn = {
@@ -42,6 +43,56 @@ const cardVariant = {
   },
 }
 
+interface ImageWithFallbackProps extends Omit<React.ComponentProps<typeof ZoomImage>, 'src'> {
+  src: string;
+}
+
+const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, ...props }) => {
+  const [imgSrc, setImgSrc] = useState(src)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
+  
+  useEffect(() => {
+    setIsLoading(true)
+    setIsError(false)
+    const img = new Image()
+    img.src = src
+    
+    img.onload = () => {
+      setImgSrc(src)
+      setIsLoading(false)
+    }
+    
+    img.onerror = () => {
+      setImgSrc("/images/placeholder.jpg")
+      setIsLoading(false)
+      setIsError(true)
+    }
+
+    return () => {
+      img.onload = null
+      img.onerror = null
+    }
+  }, [src])
+
+  return (
+    <div className="relative w-full h-full">
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+      )}
+      <ZoomImage
+        {...props}
+        src={imgSrc}
+        className={cn(
+          props.className,
+          isLoading && "opacity-0",
+          "transition-opacity duration-200"
+        )}
+      />
+    </div>
+  )
+}
+
 export default function Home() {
   const router = useRouter()
   const [departure, setDeparture] = useState("")
@@ -53,10 +104,38 @@ export default function Home() {
 
   // Popular destinations
   const popularDestinations = [
-    { name: "Đà Lạt", image: "/placeholder.svg?height=120&width=200&text=Đà+Lạt", rating: 4.8 },
-    { name: "Nha Trang", image: "/placeholder.svg?height=120&width=200&text=Nha+Trang", rating: 4.7 },
-    { name: "Vũng Tàu", image: "/placeholder.svg?height=120&width=200&text=Vũng+Tàu", rating: 4.5 },
-    { name: "Đà Nẵng", image: "/placeholder.svg?height=120&width=200&text=Đà+Nẵng", rating: 4.9 },
+    { 
+      name: "Đà Lạt",
+      rating: 4.8,
+      description: "Thành phố ngàn hoa",
+      reviewCount: 156,
+      tripCount: 48,
+      image: "/images/destinations/da-lat.jpg"
+    },
+    { 
+      name: "Nha Trang",
+      rating: 4.7,
+      description: "Thiên đường biển",
+      reviewCount: 142,
+      tripCount: 35,
+      image: "/images/destinations/nha-trang.jpg"
+    },
+    { 
+      name: "Vũng Tàu",
+      rating: 4.5,
+      description: "Thành phố biển",
+      reviewCount: 128,
+      tripCount: 42,
+      image: "/images/destinations/vung-tau.jpg"
+    },
+    { 
+      name: "Đà Nẵng",
+      rating: 4.9,
+      description: "Thành phố đáng sống",
+      reviewCount: 189,
+      tripCount: 56,
+      image: "/images/destinations/da-nang.jpg"
+    }
   ]
 
   // Handle search
@@ -263,23 +342,32 @@ export default function Home() {
                   <Card
                     className="overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg dark:bg-gray-800 dark:border-gray-700 group"
                     onClick={() => {
+                      console.log('Chọn tuyến:', destination.name);
                       setDestination(destination.name.toLowerCase())
+                      console.log('Tìm kiếm chuyến xe từ:', departure, 'đến:', destination.name.toLowerCase());
                       handleSearch()
                     }}
                   >
-                    <div className="relative h-40">
-                      <ZoomImage
-                        src={destination.image || "/placeholder.svg"}
+                    <div className="relative h-48 sm:h-56 md:h-64 group">
+                      <ImageWithFallback
+                        src={destination.image}
                         alt={destination.name}
                         fill
-                        className="object-cover"
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                        <div>
-                          <h3 className="text-white font-bold text-lg">{destination.name}</h3>
-                          <div className="flex items-center text-white">
-                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 mr-1" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                        <div className="absolute bottom-0 p-4 text-white">
+                          <h3 className="text-lg sm:text-xl font-semibold group-hover:text-yellow-400 transition-colors">
+                            {destination.name}
+                          </h3>
+                          <p className="text-sm sm:text-base opacity-90">{destination.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Star className="w-4 h-4 fill-current text-yellow-400" />
                             <span>{destination.rating}</span>
+                            <span className="text-sm opacity-75">({destination.reviewCount} đánh giá)</span>
+                          </div>
+                          <div className="text-sm mt-1 opacity-75">
+                            <span>{destination.tripCount} chuyến/tuần</span>
                           </div>
                         </div>
                       </div>

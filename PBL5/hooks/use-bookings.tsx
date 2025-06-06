@@ -28,9 +28,9 @@ export function useCreateBooking() {
 
   return useMutation({
     mutationFn: (bookingData: BookingData) => bookingService.createBooking({
-      name: bookingData.name,
-      email: bookingData.email,
-      phone: bookingData.phone,
+      name: bookingData.passenger_name,
+      email: bookingData.passenger_email,
+      phone: bookingData.passenger_phone,
       scheduleId: String(bookingData.trip_id),
       seats: bookingData.seat_ids.map(String),
     }),
@@ -44,7 +44,7 @@ export function useCreateBooking() {
       })
 
       // Redirect to booking details or payment page
-      router.push(`/payment?tripId=${data.schedule.id}&bookingId=${data.id}`)
+      router.push(`/payment?bookingId=${data.data.id}`)
     },
     onError: (error: any) => {
       toast({

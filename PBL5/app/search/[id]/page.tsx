@@ -33,9 +33,23 @@ export default function ScheduleDetailPage() {
   // Fetch seat data using seat service
   const { data: seatData, isLoading: loadingSeats } = useQuery({
     queryKey: ["seat-status", id],
-    queryFn: () => seatService.getSeatStatus(id),
+    queryFn: async () => {
+      const data = await seatService.getSeatStatus(id)
+      console.log('Thông tin ghế từ API:', data)
+      return data
+    },
     enabled: !!id,
   })
+
+  useEffect(() => {
+    if (selectedSeats.length > 0) {
+      console.log('Các ghế đã chọn:', {
+        count: selectedSeats.length,
+        seats: selectedSeats,
+        schedule: detail?.data?.id
+      })
+    }
+  }, [selectedSeats, detail])
 
   // Create booking mutation
   const createBookingMutation = useMutation({
@@ -116,20 +130,20 @@ export default function ScheduleDetailPage() {
   const canBook = selectedSeats.length > 0 && customer.name && customer.phone && customer.email && agree && !bookingMutation.isPending
   // Helper để tạo template sơ đồ ghế
   function getSeatMapTemplate(seatData: any): SeatMapTemplate {
-    // 3 cột, mỗi cột 7 ghế, cột giữa không có ghế đầu
+    console.log('Dữ liệu ghế:', seatData?.data);
+    
     const rows = [
-      { rowLabel: "A", count: 7 }, // Cột 1
-      { rowLabel: "B", count: 7, skip: 1 }, // Cột 2 (bỏ ghế đầu)
-      { rowLabel: "C", count: 7 }, // Cột 3
+      { rowLabel: "A", count: 17 }, // Tầng dưới
+      { rowLabel: "B", count: 17 }, // Tầng trên
     ]
     const floors = ["Tầng dưới", "Tầng trên"]
     let seatIdx = 0
-    const seatsPerFloor = 18 // 3 hàng x 6 ghế
+
     return {
       floors: floors.map((floor, floorIdx) => ({
         name: floor,
-        rows: rows.map(row => {
-            const seats: {
+        rows: [rows[floorIdx]].map(row => {
+          const seats: {
             id: string
             label: string
             status: SeatStatus
@@ -137,31 +151,25 @@ export default function ScheduleDetailPage() {
             row: string
             col: number
             isEmpty?: boolean
-            }[] = []
+          }[] = []
+
           for (let i = 0; i < row.count; i++) {
-            if (row.rowLabel === "B" && i === 0 && row.skip) {
-              seats.push({
-                id: `${row.rowLabel}${i + 1 + floorIdx * seatsPerFloor}`,
-                label: "",
-                status: "empty" as SeatStatus,
-                floor,
-                row: row.rowLabel,
-                col: i + 1,
-                isEmpty: true,
-              })
-              continue
-            }
             // Lấy trạng thái ghế từ seatData nếu có
             let status: SeatStatus = "available"
             if (seatData?.data?.seatStatusCode) {
               const code = seatData.data.seatStatusCode[seatIdx]
-              if (code === "0") status = "booked"
-              else if (code === "1") status = "available"
-              // Có thể mở rộng thêm trạng thái khác nếu backend trả về
+              status = code === "1" ? "available" : "booked"
             }
+
+            // Lấy ID ghế từ API
+            const seatId = seatData?.data?.seats?.[seatIdx]?.toString() || `${row.rowLabel}${i + 1}`
+            
+            // Tạo label ghế (A01, A02, ..., B01, B02, ...)
+            const seatLabel = `${row.rowLabel}${(i + 1).toString().padStart(2, '0')}`
+
             seats.push({
-              id: `${row.rowLabel}${i + 1 + floorIdx * seatsPerFloor}`,
-              label: `${row.rowLabel}${i + 1 + floorIdx * seatsPerFloor}`,
+              id: seatId,
+              label: seatLabel,
               status,
               floor,
               row: row.rowLabel,
@@ -169,6 +177,7 @@ export default function ScheduleDetailPage() {
             })
             seatIdx++
           }
+          console.log(`${row.rowLabel} seats:`, seats.map(s => ({label: s.label, status: s.status})));
           return { rowLabel: row.rowLabel, seats }
         })
       }))
@@ -287,4 +296,4 @@ export default function ScheduleDetailPage() {
       </div>
     </div>
   )
-} 
+}

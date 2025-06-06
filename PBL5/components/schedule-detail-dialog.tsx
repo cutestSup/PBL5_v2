@@ -184,50 +184,50 @@ export function ScheduleDetailDialog({
       return newSeats
     })
   }
-
   // Create booking mutation
-  const createBookingMutation = useMutation<BookingResponse, Error, void, unknown>({    mutationFn: async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Vui lòng đăng nhập để đặt vé");
-      }
+  const createBookingMutation = useMutation<BookingResponse, Error, void>({
+    mutationFn: async () => {
+      try {
+        // Convert seat names to seat IDs
+        const seatIds = selectedSeats.map(seatName => getSeatId(seatName, String(schedule.id)));
+        
+        // Prepare booking data with converted seat IDs
+        const bookingData = {
+          name: customerInfo.name,
+          email: customerInfo.email,
+          phone: customerInfo.phone,
+          scheduleId: String(schedule.id),
+          seats: seatIds.map(id => String(id))
+        };
 
-      // Convert seat names to seat IDs
-      const seatIds = selectedSeats.map(seatName => getSeatId(seatName, String(schedule.id)));      // Prepare booking data with converted seat IDs
-      const bookingData = {
-        name: customerInfo.name,
-        email: customerInfo.email,
-        phone: customerInfo.phone,
-        scheduleId: String(schedule.id),
-        seats: seatIds.map(id => String(id))
-      };
+        console.log('Sending booking data:', bookingData);
 
-      console.log('Sending formatted data:', bookingData);
+        const response = await fetch("http://localhost:5000/api/booking/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(bookingData),
+        });
 
-      const response = await fetch("http://localhost:5000/api/booking/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(bookingData),
-      });        let errorData;
         const data = await response.json();
         
         if (!response.ok) {
-          console.error('Booking error:', data);
           throw new Error(data.message || "Đặt vé thất bại. Vui lòng thử lại sau.");
         }
         
         if (!data.success) {
-          console.error('Booking failed:', data);
           throw new Error(data.message || "Đặt vé thất bại. Vui lòng kiểm tra lại thông tin.");
         }
         
         console.log('Booking response:', data);
         return data;
+      } catch (error: any) {
+        console.error('Booking error:', error);
+        throw new Error(error.message || "Đặt vé thất bại. Vui lòng thử lại sau.");
+      }
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       setError(error.message || "Đặt vé thất bại!");
       toast({
         variant: "destructive",
@@ -249,7 +249,6 @@ export function ScheduleDetailDialog({
         title: "Đặt vé thành công!",
         description: "Bạn sẽ được chuyển đến trang thanh toán.",
       });
-      // Chuyển đến trang thanh toán với ID đặt vé
       router.push(`/payment?bookingId=${data.data.id}`);
     }
   })
@@ -304,9 +303,7 @@ export function ScheduleDetailDialog({
   if (!schedule) return null
 
   // Get booked seats from seat status
-  const bookedSeats = seatStatus?.data?.seats?.rows
-    ?.filter(seat => seat.status === "booked")
-    ?.map(seat => seat.seatId) || []
+  const bookedSeats = seatStatus?.data?.seats || []
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -334,11 +331,11 @@ export function ScheduleDetailDialog({
             <div className="grid grid-cols-2 gap-8">              
               {/* Tầng dưới */}
               <div className="relative bg-gray-50 rounded-lg p-6">
-                <h4 className="text-sm font-medium mb-4">Tầng dưới</h4>
+                <h4 className="text-sm font-medium mb-4 text-center">Tầng dưới</h4>
                 {/* Vô lăng */}
                 <div className="absolute top-4 left-4">
                   <div className="w-8 h-8 border-2 border-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-gray-400">⌂</span>
+                    <span className="text-gray-400">🛞</span>
                   </div>
                 </div>
                 <div className="relative mt-8">

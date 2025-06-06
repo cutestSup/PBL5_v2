@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useBookingDetail } from "@/hooks/use-booking-detail"
 import { paymentService } from "@/services/payment-service"
+import { toast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface BookingDetailResponse {
   success: boolean
@@ -120,18 +122,39 @@ export default function PaymentPage() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handlePaymentConfirmation = async () => {
-    if (!bookingId) return
+    if (!bookingId || !reference) return
     
     try {
       setIsProcessing(true)
       const response = await paymentService.processPayment(bookingId)
       
       if (response.success) {
-        // Refresh the booking details to get updated status
+        // Show success message with reference
+        toast({
+          title: "Xác nhận thanh toán thành công!",
+          description: (
+            <Alert className="mt-2">
+              <AlertDescription>
+                Mã đơn hàng của bạn là: <span className="font-bold">{reference}</span>
+                <br />
+                Vui lòng lưu lại mã này để tra cứu thông tin vé.
+              </AlertDescription>
+            </Alert>
+          ),
+          duration: 5000,
+        })
+
+        // Wait for 2 seconds so user can see the message
+        await new Promise(resolve => setTimeout(resolve, 2000))
         router.push("/")
       }
     } catch (error) {
       console.error('Payment processing error:', error)
+      toast({
+        variant: "destructive",
+        title: "Xác nhận thanh toán thất bại",
+        description: "Vui lòng thử lại sau hoặc liên hệ hỗ trợ",
+      })
     } finally {
       setIsProcessing(false)
     }
@@ -313,7 +336,7 @@ export default function PaymentPage() {
 
               {/* Reference Code */}
               <div className="text-center text-sm text-gray-600 mb-4">
-                Mã đơn hàng: <span className="font-medium">{reference}</span>
+                Mã vé: <span className="font-medium">{reference}</span>
               </div>
 
               {/* Confirmation Button */}

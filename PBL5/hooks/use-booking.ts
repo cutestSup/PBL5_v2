@@ -25,10 +25,11 @@ export function useBooking() {
     try {
       setIsLoading(true)
       setError(null)
-      const newBooking = await bookingService.createBooking({
+      const response = await bookingService.createBooking({
         scheduleId,
         seatNumbers
       })
+      const newBooking = response as unknown as Booking
       setBookings(prev => [...prev, newBooking])
       return newBooking
     } catch (err) {
