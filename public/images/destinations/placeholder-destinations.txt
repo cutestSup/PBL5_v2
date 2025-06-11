@@ -1,0 +1,13 @@
+Please add the following images to this folder:
+
+1. da-lat.jpg - An image of Đà Lạt city/landscape
+2. nha-trang.jpg - An image of Nha Trang beach
+3. vung-tau.jpg - An image of Vung Tau coast/lighthouse
+4. da-nang.jpg - An image of Dragon Bridge or Golden Bridge
+
+Image requirements:
+- Resolution: At least 800x600 pixels
+- Format: JPG
+- Aspect ratio: 4:3 or 16:9
+- File size: Less than 500KB each
+- Name format: lowercase, hyphenated
